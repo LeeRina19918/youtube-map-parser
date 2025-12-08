@@ -35,7 +35,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def slugify(text: str) -> str:
-    """Перетворює назву кластера на безпечне ім'я файла."""
     allowed = "abcdefghijklmnopqrstuvwxyz0123456789_"
     text = text.lower().replace(" ", "_")
     return "".join(ch for ch in text if ch in allowed)
@@ -48,13 +47,13 @@ def main() -> None:
     if not input_path.exists():
         raise SystemExit(f"Не знайдено файл {input_path}")
 
-    # Читаємо всі канали
     df = pd.read_csv(input_path)
 
-    # subscribersCount у нас текстом — перетворюємо на число
     if "subscribersCount" in df.columns:
         df["subscribersCount"] = (
-            pd.to_numeric(df["subscribersCount"], errors="coerce").fillna(0).astype(int)
+            pd.to_numeric(df["subscribersCount"], errors="coerce")
+            .fillna(0)
+            .astype(int)
         )
     else:
         raise SystemExit("У файлі немає стовпчика 'subscribersCount'")
@@ -62,7 +61,6 @@ def main() -> None:
     if "clusterName" not in df.columns:
         raise SystemExit("У файлі немає стовпчика 'clusterName'")
 
-    # Фільтр по кластеру та кількості підписників
     mask = (df["clusterName"] == args.cluster) & (
         df["subscribersCount"] >= args.min_subs
     )
@@ -79,14 +77,12 @@ def main() -> None:
             f"у кластері '{args.cluster}' з підписниками ≥ {args.min_subs}"
         )
 
-    # Визначаємо назву файлу
     if args.output:
         output_path = Path(args.output)
     else:
         slug = slugify(args.cluster)
         output_path = Path(f"filtered_{slug}_min{args.min_subs}.csv")
 
-    # Записуємо CSV (навіть якщо порожній — щоб було видно, що фільтр відпрацював)
     filtered.to_csv(output_path, index=False)
     print(f"Результат збережено у файл: {output_path}")
 
