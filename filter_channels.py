@@ -6,6 +6,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+from unidecode import unidecode
 
 COLUMNS = [
     "channelName",
@@ -49,7 +50,8 @@ def extract_row(channel: dict[str, Any]) -> dict[str, str]:
 
 
 def slugify(text: str) -> str:
-    """Зробити з назви кластера безпечний шматок для назви файлу."""
+    """Створює безпечне латинське ім'я для файлу (транслітерація кирилиці)."""
+    text = unidecode(text)  # транслітерація "Українська музика" → "Ukrainska muzyka"
     text = text.strip().lower()
     text = re.sub(r"\s+", "_", text)
     text = re.sub(r"[^a-z0-9_]+", "", text)
