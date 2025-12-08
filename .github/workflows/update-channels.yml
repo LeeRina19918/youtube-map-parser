@@ -1,0 +1,58 @@
+name: Update channels data
+
+on:
+  schedule:
+    # щоденний запуск о 03:00 UTC
+    - cron: '0 3 * * *'
+  # можливість запускати вручну з вкладки Actions
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests
+
+      - name: Run update_y_map_json.py
+        run: |
+          python update_y_map_json.py
+
+      - name: Run export_to_csv.py
+        run: |
+          python export_to_csv.py
+
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # додаємо файли, якщо вони існують
+          git add y_map_channels.json channels_all.csv || true
+
+          # якщо змін немає — не комітити
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update channels data (automatic)"
+          git push
