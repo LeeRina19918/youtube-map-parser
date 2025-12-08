@@ -4,19 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       cluster_name:
-        description: "Назва ніші/кластера"
+        description: "Назва кластера (значення поля clusterName)"
         required: true
         type: string
       min_subscribers:
         description: "Мінімальна кількість підписників"
         required: true
-        type: number
-
-permissions:
-  contents: write
+        default: "0"
+        type: string
 
 jobs:
-  run-filter:
+  filter:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,32 +24,31 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install pandas
 
       - name: Run filter script
         run: |
           python filter_channels.py \
             --cluster "${{ github.event.inputs.cluster_name }}" \
-            --min-subs "${{ github.event.inputs.min_subscribers }}"
+            --min-subs ${{ github.event.inputs.min_subscribers }}
 
-      - name: Commit filtered CSV result
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit filtered CSV (if changed)
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add filtered_*.csv || true
+          # Додаємо всі CSV, які починаються з filtered_
+          git add filtered_*.csv || echo "No CSV files to add"
 
+          # Якщо немає змін — не комітимо
           if git diff --cached --quiet; then
-            echo "No CSV changes"
-            exit 0
+            echo "No CSV changes to commit"
+          else
+            git commit -m "Add filtered CSV for cluster '${{ github.event.inputs.cluster_name }}'"
+            git push
           fi
-
-          git commit -m "Filtered channels automatically"
-          git push
